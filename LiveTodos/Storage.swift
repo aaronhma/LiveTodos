@@ -9,9 +9,12 @@ import SwiftUI
 
 struct Todo: Identifiable, Codable {
     var id = UUID()
+    var emoji: String
     var todo: String
+    var description: String
     var startTime: Date = Date.now
     var endTime: Date = Date.now
+    var template: String
 }
 
 @MainActor
@@ -35,7 +38,9 @@ class TodosStore: ObservableObject {
             let todos = try JSONDecoder().decode([Todo].self, from: data)
             return todos
         }
+        
         let todos = try await task.value
+        
         self.todos = todos
     }
     

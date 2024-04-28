@@ -10,7 +10,8 @@ import SwiftUI
 enum Tab {
     case Today
     case Schedule
-    case Automations
+    case Templates
+    case Settings
 }
 
 struct ContentView: View {
@@ -26,17 +27,24 @@ struct ContentView: View {
                 }
                 .tag(Tab.Today)
             
-            Text("Schedule")
+            Schedule()
+                .environmentObject(todosStore)
                 .tabItem {
-                    Label("Schedule", systemImage: "gear")
+                    Label("Schedule", systemImage: "clock")
                 }
                 .tag(Tab.Schedule)
             
-            Text("Automations")
+            Templates()
                 .tabItem {
-                    Label("Automations", systemImage: "gear")
+                    Label("Templates", systemImage: "wrench.adjustable")
                 }
-                .tag(Tab.Automations)
+                .tag(Tab.Templates)
+            
+            Settings()
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .tag(Tab.Settings)
         }
         .onAppear {
             Task {

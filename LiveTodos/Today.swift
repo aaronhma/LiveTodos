@@ -6,6 +6,19 @@
 //
 
 import SwiftUI
+import ActivityKit
+
+struct UserDefaultManager {
+    static func saveNewActivity(id: String, emoji: String, todo: String, startTime: Date, endTime: Date) {
+        let activity = ["id": id, "emoji": emoji, "todo": todo, "startTime": startTime, "endTime": endTime] as [String : Any]
+        if var activities: [[String: Any]] = UserDefaults.standard.object(forKey: "live_activities") as? [[String : Any]] {
+            activities.append(activity)
+            UserDefaults.standard.set(activities, forKey: "live_activities")
+        } else {
+            UserDefaults.standard.set([activity], forKey: "live_activities")
+        }
+    }
+}
 
 struct Today: View {
     @StateObject private var todosStore = TodosStore()
@@ -13,8 +26,18 @@ struct Today: View {
     @State private var showingNewTodoSheet = false
     @State private var showingTodoDeleteConfirmation = false
     
+    @State private var currentTodo = Todo(emoji: "", todo: "", description: "", template: "Today")
+    
+    // New Todo Form:
+    @State private var newTodoEmoji = ""
     @State private var newTodoText = ""
-    @State private var currentTodo = Todo(todo: "")
+    @State private var newTodoDescription = ""
+    
+    @State var startHour: Int = 0
+    @State var startMinute: Int = 0
+    
+    @State var endHour: Int = 0
+    @State var endMinute: Int = 0
     
     func save() async throws {
         try await todosStore.save(todos: todosStore.todos)
@@ -30,6 +53,10 @@ struct Today: View {
                     Text("No Todos Yet")
                         .font(.largeTitle)
                         .bold()
+                
+                    Text("Build your day with step-by-step todos.")
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
                     
                     Button {
                         showingNewTodoSheet = true
@@ -46,16 +73,21 @@ struct Today: View {
                 List {
                     Section {
                         ForEach(todosStore.todos.sorted { $0.startTime < $1.startTime }) { todo in
-                            VStack(alignment: .leading) {
-                                Text(todo.todo)
-                                    .bold()
+                            HStack {
+                                Text(todo.emoji)
+                                    .font(.largeTitle)
                                 
-                                HStack {
-                                    Text(todo.startTime, format: .dateTime.hour().minute())
-                                    Text("-")
-                                    Text(todo.endTime, format: .dateTime.hour().minute())
+                                VStack(alignment: .leading) {
+                                    Text(todo.todo)
+                                        .bold()
+                                    
+                                    HStack {
+                                        Text(todo.startTime, format: .dateTime.hour().minute())
+                                        Text("-")
+                                        Text(todo.endTime, format: .dateTime.hour().minute())
+                                    }
+                                    .foregroundStyle(.secondary)
                                 }
-                                .foregroundStyle(.secondary)
                             }
                             .onTapGesture {
                                 print("TODO: open edit sheet")
@@ -112,14 +144,8 @@ struct Today: View {
                                 }
                             }
                         }
-                    }
-                    
-                    Section {
-                        Button {
-                            showingNewTodoSheet = true
-                        } label: {
-                            Label("Add New Todo", systemImage: "plus.circle")
-                        }
+                    } header: {
+                        Text(Date.now, format: .dateTime.day().month().year())
                     }
                 }
             }
@@ -129,9 +155,68 @@ struct Today: View {
                 .sheet(isPresented: $showingNewTodoSheet) {
                     NavigationStack {
                         Form {
-                            TextField("New Todo", text: $newTodoText)
+                            Section {
+                                TextField("Emoji", text: $newTodoEmoji)
+                            }
+                            
+                            Section {
+                                TextField("New Todo", text: $newTodoText)
+                            }
+                            
+                            Section {
+                                TextField("What are you planning to do?", text: $newTodoDescription)
+                            }
+                            
+                            VStack {
+                                Text("Start Time")
+                                    .bold()
+                                
+                                HStack {
+                                    Picker("", selection: $startHour){
+                                        ForEach(0..<23, id: \.self) { i in
+                                            Text("\(i) hours")
+                                                .tag(i)
+                                        }
+                                    }
+                                    .pickerStyle(WheelPickerStyle())
+                                    
+                                    Picker("", selection: $startMinute){
+                                        ForEach(0..<60, id: \.self) { i in
+                                            Text("\(i) min")
+                                                .tag(i)
+                                        }
+                                    }
+                                    .pickerStyle(WheelPickerStyle())
+                                }
+                            }
+                            .padding(.horizontal)
+                            
+                            VStack {
+                                Text("End Time")
+                                    .bold()
+                                
+                                HStack {
+                                    Picker("", selection: $endHour){
+                                        ForEach(0..<23, id: \.self) { i in
+                                            Text("\(i) hours")
+                                                .tag(i)
+                                        }
+                                    }
+                                    .pickerStyle(WheelPickerStyle())
+                                    
+                                    Picker("", selection: $endMinute){
+                                        ForEach(0..<60, id: \.self) { i in
+                                            Text("\(i) min")
+                                                .tag(i)
+                                        }
+                                    }
+                                    .pickerStyle(WheelPickerStyle())
+                                }
+                            }
+                            .padding(.horizontal)
                         }
                         .navigationTitle("New Todo")
+                        .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button("Cancel") {
@@ -141,7 +226,7 @@ struct Today: View {
                             
                             ToolbarItem(placement: .topBarTrailing) {
                                 Button("Done") {
-                                    let newTodo = Todo(todo: newTodoText)
+                                    let newTodo = Todo(emoji: newTodoEmoji, todo: newTodoText, description: newTodoDescription, template: "Today")
                                     todosStore.todos.append(newTodo)
                                     
                                     Task {
@@ -160,7 +245,17 @@ struct Today: View {
                 }
                 .toolbar {
                     if !todosStore.todos.isEmpty {
-                        EditButton()
+                        ToolbarItem(placement: .topBarLeading) {
+                            EditButton()
+                        }
+                        
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                showingNewTodoSheet = true
+                            } label: {
+                                Label("Add New Todo", systemImage: "plus")
+                            }
+                        }
                     }
                 }
         }
@@ -168,8 +263,15 @@ struct Today: View {
             Task {
                 do {
                     try await todosStore.load()
+                    
+                    if !todosStore.todos.isEmpty {
+                        //                    try LiveActivityManager.startActivity(emoji: "😉", todo: "test", startTime: Date.now, endTime: Date.now.addingTimeInterval(24 * 60 * 60))
+                        // todo: check if there's already an active live activity
+                        await LiveActivityManager.endAllActivities()
+                        let id = try LiveActivityManager.startActivity(emoji: "😉", todo: "test", startTime: Date.now, endTime: Date.now.addingTimeInterval(60 * 60))
+                    }
                 } catch {
-                    fatalError("Couldn't load stored todos.")
+                    fatalError(error.localizedDescription)
                 }
             }
         }
