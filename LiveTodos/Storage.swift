@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+enum AppSettings {
+    static let liveActivitiesTodoID = ""
+    static let iCloudSync = true
+}
+
 struct Todo: Identifiable, Codable {
     var id = UUID()
     var emoji: String

@@ -8,20 +8,10 @@
 import SwiftUI
 import ActivityKit
 
-struct UserDefaultManager {
-    static func saveNewActivity(id: String, emoji: String, todo: String, startTime: Date, endTime: Date) {
-        let activity = ["id": id, "emoji": emoji, "todo": todo, "startTime": startTime, "endTime": endTime] as [String : Any]
-        if var activities: [[String: Any]] = UserDefaults.standard.object(forKey: "live_activities") as? [[String : Any]] {
-            activities.append(activity)
-            UserDefaults.standard.set(activities, forKey: "live_activities")
-        } else {
-            UserDefaults.standard.set([activity], forKey: "live_activities")
-        }
-    }
-}
-
 struct Today: View {
     @StateObject private var todosStore = TodosStore()
+    
+    @AppStorage("liveActivitiesTodoID") private var liveActivitiesTodoID = AppSettings.liveActivitiesTodoID
     
     @State private var showingNewTodoSheet = false
     @State private var showingTodoDeleteConfirmation = false
@@ -266,9 +256,11 @@ struct Today: View {
                     
                     if !todosStore.todos.isEmpty {
                         //                    try LiveActivityManager.startActivity(emoji: "😉", todo: "test", startTime: Date.now, endTime: Date.now.addingTimeInterval(24 * 60 * 60))
-                        // todo: check if there's already an active live activity
-                        await LiveActivityManager.endAllActivities()
-                        let id = try LiveActivityManager.startActivity(emoji: "😉", todo: "test", startTime: Date.now, endTime: Date.now.addingTimeInterval(60 * 60))
+//                        await LiveActivityManager.endAllActivities()
+                        
+                        if liveActivitiesTodoID == "" {
+                            liveActivitiesTodoID = try LiveActivityManager.startActivity(emoji: "😉", todo: "test", startTime: Date.now, endTime: Date.now.addingTimeInterval(60 * 60))
+                        }
                     }
                 } catch {
                     fatalError(error.localizedDescription)
